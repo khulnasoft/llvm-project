@@ -1,0 +1,9 @@
+{
+"type": "github",
+"domain": "github.com",
+"user": "khulnasoft",
+"repo": "llvm-project",
+"test": {
+    "type":"titan-ci"
+}
+}
