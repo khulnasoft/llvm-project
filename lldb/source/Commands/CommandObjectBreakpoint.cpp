@@ -315,6 +315,11 @@ public:
           error_context =
               "Set exception breakpoints separately for c++ and objective-c";
           break;
+        // BEGIN SWIFT
+        case eLanguageTypeSwift:
+          m_exception_language = eLanguageTypeSwift;
+          break;
+        // END SWIFT
         case eLanguageTypeUnknown:
           error_context = "Unknown language type for exception breakpoint";
           break;
@@ -422,7 +427,7 @@ public:
       } break;
 
       case 'O':
-        m_exception_extra_args.AppendArgument("-O");
+        m_exception_extra_args.AppendArgument("exception-typename");
         m_exception_extra_args.AppendArgument(option_arg);
         break;
 

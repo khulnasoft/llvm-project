@@ -4109,6 +4109,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeCompiler:
                   case eSymbolTypeInstrumentation:
                   case eSymbolTypeTrampoline:
+                  case eSymbolTypeASTFile:
                     break;
 
                   case eSymbolTypeCode:

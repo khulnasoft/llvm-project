@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+//
+// This file implements the \c APINotesReader class that reads source
+// API notes data providing additional information about source code as
+// a separate input, such as the non-nil/nilable annotations for
+// method parameters.
+//
+//===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "llvm/ADT/Hashing.h"
@@ -120,8 +126,8 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   unsigned SwiftBridgeLength =
       endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
   if (SwiftBridgeLength > 0) {
-    Info.setSwiftBridge(std::string(reinterpret_cast<const char *>(Data),
-                                    SwiftBridgeLength - 1));
+    Info.setSwiftBridge(std::optional<std::string>(std::string(
+        reinterpret_cast<const char *>(Data), SwiftBridgeLength - 1)));
     Data += SwiftBridgeLength - 1;
   }
 
@@ -622,6 +628,9 @@ public:
   // which this API notes file was created, if known.
   std::optional<std::pair<off_t, time_t>> SourceFileSizeAndModTime;
 
+  /// Various options and attributes for the module
+  ModuleOptions ModuleOpts;
+
   using SerializedIdentifierTable =
       llvm::OnDiskIterableChainedHashTable<IdentifierTableInfo>;
 
@@ -820,6 +829,7 @@ bool APINotesReader::Implementation::readControlBlock(
       break;
 
     case control_block::MODULE_OPTIONS:
+      ModuleOpts.SwiftInferImportAsMember = (Scratch.front() & 1) != 0;
       break;
 
     case control_block::SOURCE_FILE:
@@ -1794,6 +1804,14 @@ APINotesReader::Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
   return Reader;
 }
 
+llvm::StringRef APINotesReader::getModuleName() const {
+  return Implementation->ModuleName;
+}
+
+ModuleOptions APINotesReader::getModuleOptions() const {
+  return Implementation->ModuleOpts;
+}
+
 template <typename T>
 APINotesReader::VersionedInfo<T>::VersionedInfo(
     llvm::VersionTuple Version,
@@ -1809,9 +1827,9 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
         return left.first < right.first;
       }));
 
-  Selected = std::nullopt;
+  Selected = Results.size();
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
-    if (!Version.empty() && Results[i].first >= Version) {
+    if (Version && Results[i].first >= Version) {
       // If the current version is "4", then entries for 4 are better than
       // entries for 5, but both are valid. Because entries are sorted, we get
       // that behavior by picking the first match.
@@ -1823,7 +1841,7 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // If we didn't find a match but we have an unversioned result, use the
   // unversioned result. This will always be the first entry because we encode
   // it as version 0.
-  if (!Selected && Results[0].first.empty())
+  if (Selected == Results.size() && Results[0].first.empty())
     Selected = 0;
 }
 
