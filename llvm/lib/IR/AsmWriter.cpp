@@ -2093,6 +2093,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2135,6 +2136,12 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto Key = N->getPtrAuthKey())
+    Printer.printInt("ptrAuthKey", *Key);
+  if (auto AddrDisc = N->isPtrAuthAddressDiscriminated())
+    Printer.printBool("ptrAuthIsAddressDiscriminated", *AddrDisc);
+  if (auto Disc = N->getPtrAuthExtraDiscriminator())
+    Printer.printInt("ptrAuthExtraDiscriminator", *Disc);
   Out << ")";
 }
 
@@ -2151,6 +2158,9 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
+  Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
+  if (!N->getSpareBitsMask().isZero())
+    Printer.printAPInt("spare_bits_mask", N->getSpareBitsMask(), true, false);
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),
@@ -2168,6 +2178,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *SpecificationOf = N->getRawSpecificationOf())
+    Printer.printMetadata("specification_of", SpecificationOf);
   Out << ")";
 }
 
