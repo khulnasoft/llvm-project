@@ -35,6 +35,8 @@ class APINotesWriter::Implementation {
   /// Mapping from strings to identifier IDs.
   llvm::StringMap<IdentifierID> IdentifierIDs;
 
+  bool SwiftInferImportAsMember = false;
+
   /// Information about contexts (Objective-C classes or protocols or C++
   /// namespaces).
   ///
@@ -269,6 +271,11 @@ void APINotesWriter::Implementation::writeControlBlock(
 
   control_block::ModuleNameLayout ModuleName(Stream);
   ModuleName.emit(Scratch, this->ModuleName);
+
+  if (SwiftInferImportAsMember) {
+    control_block::ModuleOptionsLayout moduleOptions(Stream);
+    moduleOptions.emit(Scratch, SwiftInferImportAsMember);
+  }
 
   if (SourceFile) {
     control_block::SourceFileLayout SourceFile(Stream);
@@ -1380,6 +1387,10 @@ void APINotesWriter::addTypedef(std::optional<Context> Ctx,
   IdentifierID TypedefID = Implementation->getIdentifier(Name);
   ContextTableKey Key(Ctx, TypedefID);
   Implementation->Typedefs[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addModuleOptions(ModuleOptions opts) {
+  Implementation->SwiftInferImportAsMember = opts.SwiftInferImportAsMember;
 }
 } // namespace api_notes
 } // namespace clang
